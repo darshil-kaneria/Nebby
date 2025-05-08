@@ -1,43 +1,68 @@
 #!/bin/bash
+# Modified client.sh to support both wget and Chrome for video
+
 sudo ifconfig ingress mtu 100
 sudo sysctl net.ipv4.tcp_sack=0
 echo "Launching client..."
 cc=$1
 link=$2
+duration=${3:-30}  # Default video duration: 30 seconds
+client_type=${4:-"wget"}  # Default client: wget
 
-#launch the desired client below:
-#get the algo from the name of the file
-# name=$1
-# arrIN=(${name//-/ })
-# cc=${arrIN[0]}  
-# echo "Client"
-# echo $cc
-
-#sudo echo "0" > /proc/sys/net/ipv4/tcp_sack
-# sudo tcpdump -i ingress -w aft-btl-test.pcap &
-# iperf3 -c [IP_SERVER} -p 2500 -C $cc -t 60 -R --connect-timeout 2000 -M 100
-#sudo sysctl net.ipv4.tcp_congestion_control=$1
-#iperf -c [IP_SERVER] -p 5000 -t 30 -Z $1
-#wget -U Mozilla https://www.youtube.com/ -O index
-#wget -U Mozilla https://open.spotify.com/user/deutschegrammophon/playlist/2B11k6zJ2vIJTjOiqz3Y35 -O index
-#wget -U Mozilla https://www.instagram.com/static/bundles/es6/FeedPageContainer.js/434e5de15e7c.js -O index
-# wget -U Mozilla https://www.reddit.com/r/AskReddit/comments/brlti4/reddit_what_are_some_underrated_apps/ -O index
-
-
-echo $link 
-
-wget --tries=1 --timeout=30 -U Mozilla $link -O index
-
-# cd ..
-# cd selenium/chrome
-# cd ..
-# cd custom_clients
-# python3 spotify.py $name
-# sudo ./host 1 youtube.html $cc
-# cd ..
-# cd ..
+if [ "$client_type" == "chrome" ]; then
+    echo "Using Chrome for video traffic..."
+    
+    # Create a temporary directory for Chrome
+    temp_dir="/tmp/chrome_data"
+    mkdir -p "$temp_dir"
+    log_file="$temp_dir/chrome_netlog.json"
+    
+    # Launch Chrome for video
+    echo "Launching Chrome with URL: $link"
+    echo "Network log will be saved to: $log_file"
+    
+    google-chrome --headless --no-sandbox --disable-gpu \
+      --autoplay-policy=no-user-gesture-required \
+      --log-net-log="$log_file" \
+      --net-log-capture-mode=IncludeCookiesAndCredentials \
+      --user-data-dir="$temp_dir" \
+      "$link" &
+    
+    chrome_pid=$!
+    
+    # Let Chrome run for the specified duration
+    echo "Capturing video traffic for $duration seconds..."
+    sleep $duration
+    
+    # Kill Chrome
+    echo "Stopping Chrome..."
+    kill $chrome_pid
+    wait $chrome_pid 2>/dev/null
+    
+    # Wait for log file to be written
+    sleep 3
+    
+    # Check if network log exists
+    if [ -f "$log_file" ]; then
+        echo "Network log captured successfully"
+        # Copy the network log to current directory
+        cp "$log_file" ./chrome_netlog.json
+        echo "Copied network log to ./chrome_netlog.json"
+    else
+        echo "ERROR: Network log not found at $log_file"
+        # Create an empty log file to prevent errors
+        echo "{\"events\":[]}" > ./chrome_netlog.json
+        echo "Created empty network log"
+    fi
+    
+    # Don't clean up temp_dir immediately to allow for debugging
+    # rm -rf "$temp_dir"
+    echo "Temporary Chrome data is in $temp_dir"
+else
+    # Original wget functionality
+    echo $link
+    wget --tries=1 --timeout=30 -U Mozilla $link -O index
+fi
 
 sleep 1
 echo "DONE!"
-# sudo killall iperf 
-#sudo killall iperf wget

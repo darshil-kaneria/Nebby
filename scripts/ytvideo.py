@@ -6,7 +6,7 @@ import time
 options = Options()
 options.add_argument('--headless')
 
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome("/home/dkaneria/workspace/cmu/research/video-cca-identifier/setup_cloudlab/chromedriver-linux64", options=options)
 driver.get('https://www.youtube.com/watch?v=XALBGkjkUPQ')
 # put the youtube video link here
 

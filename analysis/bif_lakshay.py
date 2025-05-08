@@ -218,6 +218,7 @@ def get_flow_stats(flows):
     return num
 
 def run(files,p):
+    global SHOW, MULTI_GRAPH, SMOOTHENING, ONLY_STATS
     flows = {}
     from globals_lakshay import PATH
     for f in files:

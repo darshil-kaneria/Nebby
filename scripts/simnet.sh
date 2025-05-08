@@ -1,36 +1,40 @@
-cc=$1
+#!/bin/bash
+# Modified simnet.sh to support video traffic
 
-#pre delay in ms
+cc=$1
 predelay=$2
-# post delay in ms
 postdelay=$3
-# btl bandwidth in kbps
 bw=$4
-# Buffer size in bytes, set to 1 BDP
 buffBDP=$5
 link=$6
+duration=${7:-30}  # Default video duration
+client_type=${8:-"wget"}  # Default client type
+
+# Calculate BDP and buffer size
 bdp=$(($(($(($predelay+$postdelay))*$bw*$buffBDP))/4))
-echo $bdp
-buff=$bdp #(($(($buffBDP))*$(($bdp))))
-echo $buff
-# buffer AQM
+echo "BDP: $bdp"
+buff=$bdp
+echo "Buffer size: $buff"
+
+# Buffer AQM
 aqm=droptail
 
-#ssh edith iperf -s -p 3000 &
-
+# Create bandwidth trace file
 num=$(($bw/12))
-
 rm -f ../traces/bw.trace
 touch ../traces/bw.trace
 for (( c=1; c<=$num; c++ ))
 do
-echo $(($(($c*1000))/$num)) >> ../traces/bw.trace
+  echo $(($(($c*1000))/$num)) >> ../traces/bw.trace
 done
-#pcap name
-echo $cc
+
+# Pcap name
 dump=test.pcap
-echo $predelay
-# mm-delay $predelay ./btl.sh $dump $postdelay $buff $aqm $cc 
-mm-delay $predelay ./btl.sh $dump $postdelay $buff $aqm $cc $link
-#ssh edith killall iperf
+echo "CC: $cc"
+echo "Pre-delay: $predelay"
+
+# Pass client type parameter to btl.sh
+mm-delay $predelay ./btl.sh $dump $postdelay $buff $aqm $cc $link $duration $client_type
+
+# Cleanup
 sudo killall mm-delay

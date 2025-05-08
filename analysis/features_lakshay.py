@@ -103,8 +103,15 @@ def smoothen(time, data, rtt):
 
 def plot_one_bt(f, p,t=1):
     fs = f.split("-")
-    pre = int(fs[2])
-    post = int(fs[3])
+    # Handle case when filename doesn't have enough segments
+    if len(fs) < 4:
+        print(f"Warning: Filename '{f}' doesn't follow expected format.")
+        print("Using default values: predelay=0, postdelay=50")
+        pre = 0
+        post = 50
+    else:
+        pre = int(fs[2])
+        post = int(fs[3])
     rtt = float(((pre+post)*2))/1000
     ax = 0
     if t==1:
