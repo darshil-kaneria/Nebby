@@ -1,0 +1,8 @@
+FROM node:slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y procps
+RUN npm install -g http-server
+RUN mkdir -p /data
+WORKDIR /data
+RUN echo "net.ipv4.tcp_congestion_control=veno" > /etc/sysctl.conf
+CMD sysctl -p && http-server -p 8000

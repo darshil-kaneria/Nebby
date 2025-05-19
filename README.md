@@ -21,3 +21,14 @@ Measurement toolkit for identifying congestion control algorithms in the wild
 * Run ```scripts/clean.sh``` to clear old files, queues, etc. before a fresh test
 * While measuring video, choose a relatively higher bandwidth (>500kbps). 200kbps is sufficient for static webpages.
 
+### (Darshil Notes)
+For training,
+```
+1. cd local_sv
+2. sudo ./setup_cca.sh
+3. cd ..
+4. ./nebby-train.sh
+5. ./rename-files.sh
+6. ./nebby-train.sh (with capture portion commented out)
+```
+

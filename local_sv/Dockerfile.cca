@@ -1,0 +1,13 @@
+FROM node:slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y procps
+RUN npm install -g http-server
+WORKDIR /data
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+echo "Setting CCA to $CCA"\n\
+sysctl -w net.ipv4.tcp_congestion_control=$CCA\n\
+http-server -p $PORT' > /start.sh && chmod +x /start.sh
+
+CMD ["/start.sh"]
