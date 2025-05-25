@@ -10,9 +10,6 @@ from scipy.fft import irfft
 
 def get_window(f,p,t=1):
     algo_cc = f
-#     flows = process_flows(algo_cc, "./Nebby/measurements/",p=p)    
-    # flows = process_flows(algo_cc, "./Nebby/measurements-new-btl/50-200-2-60/",p=p)
-#     flows = process_flows(algo_cc, "./Nebby/measurements-100-150/",p=p)
     from globals_lakshay import PATH
     flows = process_flows(algo_cc, PATH ,p=p)
     params = algo_cc.split("-")
@@ -24,24 +21,30 @@ def get_window(f,p,t=1):
     DA = []
     use_port = 0
     maxx = 0
-    # print("All Ports : ", flows.keys())
+    
+    # Check if any flows were found
+    if len(flows) == 0:
+        print(f"No flows found in {f}")
+        if t==2:
+            return [], [], [], [], []
+        return [], [], []
+    
+    # Find the port with the most windows
     for port in flows.keys():
         if len(flows[port]['windows']) > maxx:
             maxx = len(flows[port]['windows'])
             use_port = port
-    # print("Port Selected",use_port)
+    
+    # If no valid port found, use the first available
+    if use_port == 0:
+        use_port = list(flows.keys())[0]
+        
     data = flows[use_port]['windows']
     time = flows[use_port]['times']
     retrans = flows[use_port]['retrans']
     OOA = flows[use_port]['OOA']
     DA = flows[use_port]['DA']
-#     time_index = len(time)-1
-#     for index in range(len(flows[use_port]['times'])-1):
-#         if flows[use_port]['times'][index+1] - flows[use_port]['times'][index] > :
-#             time_index = index
-#     time_last = flows[use_port]['times'][time_index]
-#     data = data[:time_index+1]
-#     time = time[:time_index+1]
+    
     if t==2:
         return data, time, retrans, OOA, DA
     if t==1:

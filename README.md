@@ -27,6 +27,7 @@ For training,
 1. cd local_sv
 2. sudo ./setup_cca.sh
 3. cd ..
+3a. Make sure to adjust the ip based on the container's ip. 
 4. ./nebby-train.sh
 5. ./rename-files.sh
 6. ./nebby-train.sh (with capture portion commented out)

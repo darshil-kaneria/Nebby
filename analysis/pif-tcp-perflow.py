@@ -17,7 +17,7 @@ o Organize plots by flow size (larger flows have larger graphs)
 o Custom smoothening function
 '''
 
-fields=["time", "frame_time_rel", "tcp_time_rel", "frame_num", "frame_len", "ip_src", "src_port", "ip_dest", "dest_port", "tcp_len", "seq", "ack"]
+fields=["frame.time_epoch", "frame.time_relative", "tcp.time_relative", "frame.number", "frame.len", "ip.src", "tcp.srcport", "ip.dst", "tcp.dstport", "tcp.len", "tcp.seq", "tcp.ack"]
 
 class pkt:
     contents=[]
@@ -53,46 +53,55 @@ def process_flows(cc, dir):
                 continue
             if data_sent == 0 : 
                 if len(port_set) < 2:
-                    if "100.64.0." in packet.get("ip_src") :    
-                        port_set.add(packet.get("ip_src"))
-                    if "100.64.0." in packet.get("ip_dest") :
-                        port_set.add(packet.get("ip_dest"))
+                    if "172.26.46.4" in packet.get("ip.src") :    
+                        port_set.add(packet.get("ip.src"))
+                        port_set.add(packet.get("ip.dst"))
+                    if "172.26.46.4" in packet.get("ip.dst") :
+                        port_set.add(packet.get("ip.src"))
+                        port_set.add(packet.get("ip.dst"))
                     continue
                 else :
                     data_sent = 1
-                    port_list = list(port_set)
-                    port_list.sort()
-                    host_port = port_list[-1]
+                    host_port = "172.26.46.4"
 
-            if packet.get("ip_src")==host_port and packet.get("frame_time_rel")!='' and packet.get("ack")!='': 
-                # we care about this ACK packet
+            if packet.get("ip.src")==host_port and packet.get("frame.time_relative")!='' and packet.get("tcp.len") and int(packet.get("tcp.len")) > 0:
+                # Data packet FROM host (server sending data)
                 validPkt=True
-                port=packet.get("src_port")
+                port=packet.get("tcp.srcport")
                 if port not in flows:
-                    flows[port]={"serverip":packet.get("ip_dest"), "serverport":packet.get("dest_port"), "times":[], "windows":[], "cwnd":[], "bif":0, "last_ack":0, "last_seq":0, "pif":0}
-                flows[port]["times"].append(float(packet.get("frame_time_rel")))
-                flows[port]["bif"]-=(int(packet.get("ack"))-int(flows[port]["last_ack"]))
-                flows[port]["last_ack"]=int(packet.get("ack"))
-                #flows[port]["windows"].append(int(flows[port]["bif"]))
-                flows[port]["pif"]-=1
-                flows[port]["cwnd"].append(flows[port]["pif"])
-            elif packet.get("ip_dest")==host_port and packet.get("frame_time_rel")!='' and packet.get("seq")!='':
-                #we care about this Data packet
-                validPkt=True
-                port=packet.get("dest_port")
-                if port not in flows:
-                    flows[port]={"serverip":packet.get("ip_src"), "serverport":packet.get("src_port"), "times":[], "windows":[], "cwnd":[], "bif":0, "last_ack":0, "last_seq":0, "pif":0}
-                flows[port]["times"].append(float(packet.get("frame_time_rel")))
-                flows[port]["bif"]+=(int(packet.get("seq"))-int(flows[port]["last_seq"]))
-                flows[port]["last_seq"]=int(packet.get("seq"))
+                    flows[port]={"serverip":packet.get("ip.dst"), "serverport":packet.get("tcp.dstport"), "times":[], "windows":[], "cwnd":[], "bif":0, "last_ack":0, "last_seq":0, "pif":0, "max_ack":0, "max_seq":0}
+                flows[port]["times"].append(float(packet.get("frame.time_relative")))
+                tcp_seq = int(packet.get("tcp.seq"))
+                tcp_len = int(packet.get("tcp.len"))
+                flows[port]["max_seq"] = max(flows[port]["max_seq"], tcp_seq + tcp_len)
+                flows[port]["bif"] = flows[port]["max_seq"] - flows[port]["max_ack"]
                 flows[port]["pif"]+=1
+                flows[port]["cwnd"].append(flows[port]["pif"])
+            elif packet.get("ip.dst")==host_port and packet.get("frame.time_relative")!='' and packet.get("tcp.len") and int(packet.get("tcp.len")) > 0:
+                # Data packet TO host (client sending data to server)
+                validPkt=True
+                port=packet.get("tcp.dstport")
+                if port not in flows:
+                    flows[port]={"serverip":packet.get("ip.src"), "serverport":packet.get("tcp.srcport"), "times":[], "windows":[], "cwnd":[], "bif":0, "last_ack":0, "last_seq":0, "pif":0, "max_ack":0, "max_seq":0}
+                flows[port]["times"].append(float(packet.get("frame.time_relative")))
+                # Don't update BiF for incoming data to server, we're measuring outgoing BiF
+            elif packet.get("ip.dst")==host_port and packet.get("frame.time_relative")!='' and packet.get("tcp.ack")!='':
+                # Pure ACK packet TO host (acknowledging server's data)
+                validPkt=True
+                port=packet.get("tcp.dstport")
+                if port not in flows:
+                    flows[port]={"serverip":packet.get("ip.src"), "serverport":packet.get("tcp.srcport"), "times":[], "windows":[], "cwnd":[], "bif":0, "last_ack":0, "last_seq":0, "pif":0, "max_ack":0, "max_seq":0}
+                flows[port]["times"].append(float(packet.get("frame.time_relative")))
+                flows[port]["max_ack"] = max(flows[port]["max_ack"], int(packet.get("tcp.ack")))
+                flows[port]["bif"] = flows[port]["max_seq"] - flows[port]["max_ack"]
+                flows[port]["pif"]-=1
                 flows[port]["cwnd"].append(flows[port]["pif"])
             if SMOOTHENING and validPkt and len(flows[port]["windows"])>2:
                 flows[port]["windows"].append(int((s_factor*flows[port]["windows"][-1])+((1-s_factor)*flows[port]["bif"])))
             elif validPkt:
                 flows[port]["windows"].append(int(flows[port]["bif"]))
             line_count+=1
-            total_bytes+=int(packet.get("frame_len"))
+            total_bytes+=int(packet.get("frame.len"))
             #print(line_count, total_bytes)
             
         print("total bytes processed:", total_bytes/1000, "KBytes for", cc, "(unlimited)")
@@ -107,7 +116,7 @@ def get_flow_stats(flows):
     print("------------------------------------------------------------------------------")
     print('%6s'%"port", '%15s'%"SrcIP", '%8s'%"SrcPort",  '%8s'%"duration",  '%8s'%"start",  '%8s'%"end", '%8s'%"Sent (B)", '%8s'%"Recv (B)",)
     for k in flows.keys():
-        print('%6s'%k, '%15s'%flows[k]["serverip"], '%8s'%flows[k]["serverport"], '%8s'%str('%.2f'%(flows[k]["times"][-1]-flows[k]["times"][0])), '%8s'%str('%.2f'%flows[k]["times"][0]), '%8s'%str('%.2f'%flows[k]["times"][-1]), '%8s'%flows[k]["last_seq"], '%8s'%flows[k]["last_ack"])
+        print('%6s'%k, '%15s'%flows[k]["serverip"], '%8s'%flows[k]["serverport"], '%8s'%str('%.2f'%(flows[k]["times"][-1]-flows[k]["times"][0])), '%8s'%str('%.2f'%flows[k]["times"][0]), '%8s'%str('%.2f'%flows[k]["times"][-1]), '%8s'%flows[k]["max_seq"], '%8s'%flows[k]["max_ack"])
         #print("    * Flow "+str(k)+": ", flows[k]["last_ack"], " ", flows[k]["last_seq"], " bytes transfered.")
     return num
 

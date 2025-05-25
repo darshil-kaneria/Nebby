@@ -12,7 +12,7 @@ echo "Connecting to: $link"
 echo "$cc" >> $wget_out
 echo "$link" >> $wget_out
 
-timeout 15s wget -U Mozilla --tries=1 --timeout=15 "$link" -O index &>> $wget_out
+timeout 30s wget -U Mozilla --tries=1 --timeout=30 "$link" -O index &>> $wget_out
 
 sleep 2
 

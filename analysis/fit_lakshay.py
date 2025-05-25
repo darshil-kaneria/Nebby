@@ -14,7 +14,15 @@ def lower_bound(arr, target):
     return index
 
 def sample_data_time(time, data, ss, m):
+    # Check if we have valid data
+    if len(time) == 0 or len(data) == 0:
+        return [], []
+    
     curr_time, curr_data = adjust(time, data)
+    
+    # Check again after adjust
+    if len(curr_time) == 0 or len(curr_data) == 0:
+        return [], []
     tp = curr_time[len(curr_time)-1] - curr_time[0]
     step = tp/m
     samp_time = [curr_time[0] + i*step for i in range(m)]
@@ -50,9 +58,13 @@ def sample_data_time(time, data, ss, m):
     return new_time, new_data
 
 def adjust(time, data):
+    # Check if data is empty or too short
+    if len(data) < 2:
+        return time, data
+    
     start = data.index(min(data[:int(len(data)/2)]))
     end = data.index(max(data[int(len(data)/2):]))
-#     print("Difference in max and min ", end-start)
+    
     if end - start <= 0: 
         return time, data
     new_time = time[start:end+1]
@@ -99,24 +111,66 @@ def getRed(files,ss=225,p="y", ft_thresh=3):
 
 
     
-def get_degree(time,data, p="n", max_deg=5):
+def get_degree(time, data, p="n", max_deg=5):
+    # Check for valid input data
+    if len(time) < 2 or len(data) < 2 or len(time) != len(data):
+        print("Invalid input data for polynomial fitting")
+        return 1, [0, 0], [1.0]
+    
+    # Check for constant data (no variation)
+    if max(data) == min(data):
+        print("Data has no variation, using constant polynomial")
+        return 1, [min(data)], [0.0]
+    
+    # Check for numerical issues
+    if any(not np.isfinite(x) for x in time + data):
+        print("Data contains non-finite values")
+        return 1, [0, 0], [1.0]
+    
     p_net = []
     mse_l = []
     fit_net = []
-    for d in range(1,max_deg+1):
-        p_temp = np.polyfit(time,data, d)
-        p_net.append(p_temp)
-        fit_net.append(np.polyval(p_temp,time))
-        mse_l.append(mse(data,fit_net[-1]))
-    if p =='y':
-#         print("1 ", p1, "MSE ", mse(data, fit_l))
-        plt.plot(time, data,c='k',label='Truth')
-#         plt.plot(time, fit_l)
-        for d in range(max_deg-1, max_deg):
-            plt.plot(time, fit_net[d],label="degree" + str(d+1))
+    
+    for d in range(1, max_deg + 1):
+        try:
+            # Normalize time to avoid numerical issues
+            time_norm = np.array(time)
+            time_norm = (time_norm - np.min(time_norm)) / (np.max(time_norm) - np.min(time_norm) + 1e-10)
+            
+            p_temp = np.polyfit(time_norm, data, d)
+            p_net.append(p_temp)
+            fit_net.append(np.polyval(p_temp, time_norm))
+            
+            # Calculate MSE
+            mse_val = np.mean((np.array(data) - fit_net[-1])**2)
+            mse_l.append(mse_val)
+            
+        except (np.linalg.LinAlgError, np.RankWarning, ValueError) as e:
+            print(f"Polynomial fitting failed for degree {d}: {e}")
+            # Use previous degree or fallback
+            if len(p_net) > 0:
+                break
+            else:
+                # Fallback to linear fit with the mean
+                p_net.append([np.mean(data)])
+                fit_net.append([np.mean(data)] * len(data))
+                mse_l.append(np.var(data))
+                break
+    
+    if len(p_net) == 0:
+        # Complete fallback
+        return 1, [np.mean(data)], [1.0]
+    
+    if p == 'y':
+        plt.plot(time, data, c='k', label='Truth')
+        for d in range(min(len(fit_net), max_deg) - 1, min(len(fit_net), max_deg)):
+            if d < len(fit_net):
+                plt.plot(time, fit_net[d], label="degree" + str(d + 1))
         plt.legend()
         plt.show()
-    return max_deg,p_net[max_deg-1], mse_l
+    
+    best_degree = len(p_net)
+    return best_degree, p_net[-1], mse_l
 
 def normalize(time, data, rtt, bdp):
     new_time = (time/rtt)
