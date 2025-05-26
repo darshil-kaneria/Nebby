@@ -1,0 +1,128 @@
+yeah
+http://192.168.0.5:8015/test-400kb.bin
+
+Redirecting output to ‘wget-log’.
+yeah-100ms
+http://192.168.0.5:8015/test-400kb.bin
+
+Redirecting output to ‘wget-log.1’.
+westwood
+http://192.168.0.5:8014/test-400kb.bin
+
+Redirecting output to ‘wget-log.2’.
+westwood-100ms
+http://192.168.0.5:8014/test-400kb.bin
+
+Redirecting output to ‘wget-log.3’.
+veno
+http://192.168.0.5:8013/test-400kb.bin
+
+Redirecting output to ‘wget-log.4’.
+veno-100ms
+http://192.168.0.5:8013/test-400kb.bin
+
+Redirecting output to ‘wget-log.5’.
+vegas
+http://192.168.0.5:8012/test-400kb.bin
+
+Redirecting output to ‘wget-log.6’.
+vegas-100ms
+http://192.168.0.5:8012/test-400kb.bin
+
+Redirecting output to ‘wget-log.7’.
+scalable
+http://192.168.0.5:8011/test-400kb.bin
+
+Redirecting output to ‘wget-log.8’.
+scalable-100ms
+http://192.168.0.5:8011/test-400kb.bin
+
+Redirecting output to ‘wget-log.9’.
+nv
+http://192.168.0.5:8010/test-400kb.bin
+
+Redirecting output to ‘wget-log.10’.
+nv-100ms
+http://192.168.0.5:8010/test-400kb.bin
+
+Redirecting output to ‘wget-log.11’.
+lp
+http://192.168.0.5:8009/test-400kb.bin
+
+Redirecting output to ‘wget-log.12’.
+lp-100ms
+http://192.168.0.5:8009/test-400kb.bin
+
+Redirecting output to ‘wget-log.13’.
+illinois
+http://192.168.0.5:8008/test-400kb.bin
+
+Redirecting output to ‘wget-log.14’.
+illinois-100ms
+http://192.168.0.5:8008/test-400kb.bin
+
+Redirecting output to ‘wget-log.15’.
+hybla
+http://192.168.0.5:8007/test-400kb.bin
+
+Redirecting output to ‘wget-log.16’.
+hybla-100ms
+http://192.168.0.5:8007/test-400kb.bin
+
+Redirecting output to ‘wget-log.17’.
+htcp
+http://192.168.0.5:8006/test-400kb.bin
+
+Redirecting output to ‘wget-log.18’.
+htcp-100ms
+http://192.168.0.5:8006/test-400kb.bin
+
+Redirecting output to ‘wget-log.19’.
+highspeed
+http://192.168.0.5:8005/test-400kb.bin
+
+Redirecting output to ‘wget-log.20’.
+highspeed-100ms
+http://192.168.0.5:8005/test-400kb.bin
+
+Redirecting output to ‘wget-log.21’.
+cdg
+http://192.168.0.5:8004/test-400kb.bin
+
+Redirecting output to ‘wget-log.22’.
+cdg-100ms
+http://192.168.0.5:8004/test-400kb.bin
+
+Redirecting output to ‘wget-log.23’.
+bic
+http://192.168.0.5:8003/test-400kb.bin
+
+Redirecting output to ‘wget-log.24’.
+bic-100ms
+http://192.168.0.5:8003/test-400kb.bin
+
+Redirecting output to ‘wget-log.25’.
+bbr
+http://192.168.0.5:8002/test-400kb.bin
+
+Redirecting output to ‘wget-log.26’.
+bbr-100ms
+http://192.168.0.5:8002/test-400kb.bin
+
+Redirecting output to ‘wget-log.27’.
+cubic
+http://192.168.0.5:8001/test-400kb.bin
+
+Redirecting output to ‘wget-log.28’.
+cubic-100ms
+http://192.168.0.5:8001/test-400kb.bin
+
+Redirecting output to ‘wget-log.29’.
+reno
+http://192.168.0.5:8000/test-400kb.bin
+
+Redirecting output to ‘wget-log.30’.
+reno-100ms
+http://192.168.0.5:8000/test-400kb.bin
+
+Redirecting output to ‘wget-log.31’.

@@ -1,7 +1,7 @@
 #!/bin/bash
 # fix-filenames.sh
 
-MEASUREMENTS_DIR="./measurements"
+MEASUREMENTS_DIR="./scripts/reference_traces"
 
 for file in "$MEASUREMENTS_DIR"/*-tcp.csv; do
   basename=$(basename "$file" -tcp.csv)

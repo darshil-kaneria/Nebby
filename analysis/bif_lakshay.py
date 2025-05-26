@@ -81,11 +81,11 @@ def process_flows(cc, dir, p="y"):
                 line_count += 1
                 continue
             if data_sent == 0:
-                # Look for client IP pattern (10.0.0.x)
-                if packet.get("ip.src") and "10.0.0." in packet.get("ip.src"):
+                # Look for client IP pattern (100.64.0.x)
+                if packet.get("ip.src") and "100.64.0." in packet.get("ip.src"):
                     data_sent = 1
                     host_port = packet.get("ip.src")
-                elif packet.get("ip.dst") and "10.0.0." in packet.get("ip.dst"):
+                elif packet.get("ip.dst") and "100.64.0." in packet.get("ip.dst"):
                     data_sent = 1
                     host_port = packet.get("ip.dst")
                 if data_sent == 0:

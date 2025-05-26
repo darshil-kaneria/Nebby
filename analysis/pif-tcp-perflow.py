@@ -53,16 +53,16 @@ def process_flows(cc, dir):
                 continue
             if data_sent == 0 : 
                 if len(port_set) < 2:
-                    if "172.26.46.4" in packet.get("ip.src") :    
+                    if "192.168.0." in packet.get("ip.src") :    
                         port_set.add(packet.get("ip.src"))
                         port_set.add(packet.get("ip.dst"))
-                    if "172.26.46.4" in packet.get("ip.dst") :
+                    if "192.168.0." in packet.get("ip.dst") :
                         port_set.add(packet.get("ip.src"))
                         port_set.add(packet.get("ip.dst"))
                     continue
                 else :
                     data_sent = 1
-                    host_port = "172.26.46.4"
+                    host_port = "192.168.0.5"
 
             if packet.get("ip.src")==host_port and packet.get("frame.time_relative")!='' and packet.get("tcp.len") and int(packet.get("tcp.len")) > 0:
                 # Data packet FROM host (server sending data)

@@ -50,62 +50,62 @@ echo "Host system CCA configuration:"
 check_host_cca
 
 # Step 1: Collect BiF Traces
-progress "1" "Collecting BiF Traces"
+# progress "1" "Collecting BiF Traces"
 
-# Get list of CCA names and URLs
-declare -a CCA_NAMES=()
-declare -a CCA_URLS=()
+# # Get list of CCA names and URLs
+# declare -a CCA_NAMES=()
+# declare -a CCA_URLS=()
 
-for container in $CONTAINERS; do
-    CCA=${container#nebby-}
-    CCA_NAMES+=("$CCA")
-    # Use sudo only for Docker command
-    PORT=$(sudo docker exec $container env | grep PORT | cut -d= -f2)
-    CCA_URLS+=("http://172.26.46.4:$PORT/test-400kb.bin")
-    echo "Found server: $CCA on port $PORT"
-done
+# for container in $CONTAINERS; do
+#     CCA=${container#nebby-}
+#     CCA_NAMES+=("$CCA")
+#     # Use sudo only for Docker command
+#     PORT=$(sudo docker exec $container env | grep PORT | cut -d= -f2)
+#     CCA_URLS+=("http://192.168.0.5:$PORT/test-400kb.bin")
+#     echo "Found server: $CCA on port $PORT"
+# done
 
-# Create a configuration file for wget
-CONFIG_FILE="nebby-training-urls.txt"
-> $CONFIG_FILE
+# # Create a configuration file for wget
+# CONFIG_FILE="nebby-training-urls.txt"
+# > $CONFIG_FILE
 
-for i in "${!CCA_NAMES[@]}"; do
-    echo "${CCA_URLS[$i]} ${CCA_NAMES[$i]}" >> $CONFIG_FILE
-    echo "Added ${CCA_NAMES[$i]} to training set"
-done
+# for i in "${!CCA_NAMES[@]}"; do
+#     echo "${CCA_URLS[$i]} ${CCA_NAMES[$i]}" >> $CONFIG_FILE
+#     echo "Added ${CCA_NAMES[$i]} to training set"
+# done
 
-# Function to run tests for a CCA (ensuring no sudo for mm commands)
-run_cca_test() {
-    local cca_name="$1"
-    local url="$2"
-    local delay_suffix="$3"
-    local delay_ms="$4"
+# # Function to run tests for a CCA (ensuring no sudo for mm commands)
+# run_cca_test() {
+#     local cca_name="$1"
+#     local url="$2"
+#     local delay_suffix="$3"
+#     local delay_ms="$4"
     
-    echo "Collecting BiF traces for $cca_name$delay_suffix using $url"
+#     echo "Collecting BiF traces for $cca_name$delay_suffix using $url"
     
-    # Optional: Change host CCA to match the one being tested
-    # Uncomment if you want to align host CCA with container CCA
-    check_host_cca "$cca_name"
+#     # Optional: Change host CCA to match the one being tested
+#     # Uncomment if you want to align host CCA with container CCA
+#     check_host_cca "$cca_name"
     
-    # Use Nebby's run_test.sh script (this should handle mm commands without sudo)
-    cd scripts
-    ./run_test.sh "$cca_name$delay_suffix" 5 $delay_ms 200 2 "$url"
-    cd ..
+#     # Use Nebby's run_test.sh script (this should handle mm commands without sudo)
+#     cd scripts
+#     ./run_test.sh "$cca_name$delay_suffix" 5 $delay_ms 200 2 "$url"
+#     cd ..
     
-    echo "✅ Collected traces for $cca_name$delay_suffix"
-}
+#     echo "✅ Collected traces for $cca_name$delay_suffix"
+# }
 
-# Collect traces using wget for all CCAs
-for i in "${!CCA_NAMES[@]}"; do
-    CCA="${CCA_NAMES[$i]}"
-    URL="${CCA_URLS[$i]}"
+# # Collect traces using wget for all CCAs
+# for i in "${!CCA_NAMES[@]}"; do
+#     CCA="${CCA_NAMES[$i]}"
+#     URL="${CCA_URLS[$i]}"
     
-    # Standard collection (50ms delay)
-    run_cca_test "$CCA" "$URL" "" 50
+#     # Standard collection (50ms delay)
+#     run_cca_test "$CCA" "$URL" "" 50
     
-    # Additional collection with different delay profile (100ms) as mentioned in the paper
-    run_cca_test "$CCA" "$URL" "-100ms" 100
-done
+#     # Additional collection with different delay profile (100ms) as mentioned in the paper
+#     run_cca_test "$CCA" "$URL" "-100ms" 100
+# done
 
 # Store original host CCA to restore later if needed
 ORIGINAL_CCA=$(sysctl net.ipv4.tcp_congestion_control | cut -d= -f2 | tr -d ' ')

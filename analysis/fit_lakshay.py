@@ -109,23 +109,57 @@ def getRed(files,ss=225,p="y", ft_thresh=3):
             count+=1
     return results
 
-
-    
 def get_degree(time, data, p="n", max_deg=5):
+    # Convert to numpy arrays for better handling
+    time = np.array(time, dtype=float)
+    data = np.array(data, dtype=float)
+    
     # Check for valid input data
     if len(time) < 2 or len(data) < 2 or len(time) != len(data):
         print("Invalid input data for polynomial fitting")
-        return 1, [0, 0], [1.0]
+        return 1, [np.mean(data) if len(data) > 0 else 0], [1.0]
     
-    # Check for constant data (no variation)
-    if max(data) == min(data):
-        print("Data has no variation, using constant polynomial")
-        return 1, [min(data)], [0.0]
+    # Remove any NaN or infinite values
+    valid_mask = np.isfinite(time) & np.isfinite(data)
+    if not np.any(valid_mask):
+        print("All data points are non-finite")
+        return 1, [0], [1.0]
     
-    # Check for numerical issues
-    if any(not np.isfinite(x) for x in time + data):
-        print("Data contains non-finite values")
-        return 1, [0, 0], [1.0]
+    time = time[valid_mask]
+    data = data[valid_mask]
+    
+    if len(time) < 2:
+        print("Not enough valid data points after cleaning")
+        return 1, [np.mean(data)], [1.0]
+    
+    # MUCH MORE RELAXED variation check
+    data_range = np.max(data) - np.min(data)
+    data_std = np.std(data)
+    
+    # Only consider it "no variation" if it's truly constant
+    if data_range < 1e-12 and data_std < 1e-12:
+        print(f"Data has no variation (range: {data_range:.2e}, std: {data_std:.2e})")
+        return 1, [np.mean(data)], [0.0]
+    
+    # If we have any variation at all, proceed with polynomial fitting
+    print(f"Data variation OK: range={data_range:.3f}, std={data_std:.3f}")
+    
+    # Normalize time to [0, 1] for numerical stability
+    time_range = np.max(time) - np.min(time)
+    if time_range < 1e-12:
+        print("Time data has no variation")
+        return 1, [np.mean(data)], [0.0]
+    
+    time_norm = (time - np.min(time)) / time_range
+    
+    # For polynomial fitting, we don't need to normalize data if it already has good range
+    # Just use the data as-is if it's reasonable
+    if data_range > 1e-6:
+        data_for_fitting = data
+    else:
+        # Only normalize if absolutely necessary
+        data_mean = np.mean(data)
+        data_for_fitting = data - data_mean
     
     p_net = []
     mse_l = []
@@ -133,28 +167,51 @@ def get_degree(time, data, p="n", max_deg=5):
     
     for d in range(1, max_deg + 1):
         try:
-            # Normalize time to avoid numerical issues
-            time_norm = np.array(time)
-            time_norm = (time_norm - np.min(time_norm)) / (np.max(time_norm) - np.min(time_norm) + 1e-10)
+            # Suppress warnings temporarily
+            with np.errstate(all='ignore'):
+                p_temp = np.polyfit(time_norm, data_for_fitting, d)
             
-            p_temp = np.polyfit(time_norm, data, d)
-            p_net.append(p_temp)
-            fit_net.append(np.polyval(p_temp, time_norm))
+            # Transform coefficients back if we normalized
+            if data_range > 1e-6:
+                p_original = p_temp.copy()
+                # Scale time components
+                for i in range(len(p_temp)):
+                    power = len(p_temp) - 1 - i
+                    if power > 0:
+                        p_original[i] = p_temp[i] / (time_range ** power)
+            else:
+                # Add back the mean if we subtracted it
+                p_original = p_temp.copy()
+                p_original[-1] = p_original[-1] + np.mean(data)
+            
+            p_net.append(p_original)
+            
+            # Evaluate polynomial
+            if data_range > 1e-6:
+                fit_values = np.polyval(p_temp, time_norm)
+            else:
+                fit_values = np.polyval(p_temp, time_norm) + np.mean(data)
+            
+            fit_net.append(fit_values)
             
             # Calculate MSE
-            mse_val = np.mean((np.array(data) - fit_net[-1])**2)
+            if data_range > 1e-6:
+                mse_val = np.mean((data - fit_values)**2)
+            else:
+                mse_val = np.mean((data - fit_values)**2)
+            
             mse_l.append(mse_val)
             
-        except (np.linalg.LinAlgError, np.RankWarning, ValueError) as e:
+        except Exception as e:
             print(f"Polynomial fitting failed for degree {d}: {e}")
-            # Use previous degree or fallback
+            # If we have previous successful fits, stop here
             if len(p_net) > 0:
                 break
             else:
-                # Fallback to linear fit with the mean
+                # Simple fallback to mean
                 p_net.append([np.mean(data)])
-                fit_net.append([np.mean(data)] * len(data))
-                mse_l.append(np.var(data))
+                fit_net.append(np.full_like(data, np.mean(data)))
+                mse_l.append(np.var(data) if np.var(data) > 0 else 1.0)
                 break
     
     if len(p_net) == 0:
@@ -162,22 +219,42 @@ def get_degree(time, data, p="n", max_deg=5):
         return 1, [np.mean(data)], [1.0]
     
     if p == 'y':
-        plt.plot(time, data, c='k', label='Truth')
-        for d in range(min(len(fit_net), max_deg) - 1, min(len(fit_net), max_deg)):
+        plt.figure(figsize=(10, 6))
+        plt.plot(time, data, 'ko-', label='Original Data', markersize=3)
+        for d in range(min(len(fit_net), max_deg)):
             if d < len(fit_net):
-                plt.plot(time, fit_net[d], label="degree" + str(d + 1))
+                plt.plot(time, fit_net[d], label=f"Degree {d + 1}")
         plt.legend()
+        plt.title("Polynomial Fitting")
+        plt.xlabel("Time")
+        plt.ylabel("Data")
         plt.show()
     
     best_degree = len(p_net)
     return best_degree, p_net[-1], mse_l
 
 def normalize(time, data, rtt, bdp):
+    # Convert to numpy arrays for safety
+    time = np.array(time)
+    data = np.array(data)
+    
+    # Normalize time by RTT (this part works fine)
     new_time = (time/rtt)
-    new_data = (data/bdp)*100
-    new_time -=min(new_time)
-    new_data -=min(new_data)
-    return new_time, new_data
+    new_time -= np.min(new_time)
+    
+    # FIX: Don't use BDP normalization - it's too aggressive and causes data to become constant
+    # OLD: new_data = (data/bdp)*100
+    # NEW: Use relative normalization that preserves variation
+    
+    if len(data) > 0 and np.max(data) > np.min(data):
+        # Normalize to 0-100 range based on data's own range
+        data_range = np.max(data) - np.min(data)
+        new_data = ((data - np.min(data)) / data_range) * 100
+    else:
+        # If data is constant, return reasonable values
+        new_data = np.full_like(data, 50.0)
+    
+    return new_time.tolist(), new_data.tolist()
 
 
 def get_feature_degree(files,ss=225,p='n',ft_thresh=3,max_deg=5):

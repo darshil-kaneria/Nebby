@@ -1,0 +1,16 @@
+http://192.168.0.5:8015/test-400kb.bin yeah
+http://192.168.0.5:8014/test-400kb.bin westwood
+http://192.168.0.5:8013/test-400kb.bin veno
+http://192.168.0.5:8012/test-400kb.bin vegas
+http://192.168.0.5:8011/test-400kb.bin scalable
+http://192.168.0.5:8010/test-400kb.bin nv
+http://192.168.0.5:8009/test-400kb.bin lp
+http://192.168.0.5:8008/test-400kb.bin illinois
+http://192.168.0.5:8007/test-400kb.bin hybla
+http://192.168.0.5:8006/test-400kb.bin htcp
+http://192.168.0.5:8005/test-400kb.bin highspeed
+http://192.168.0.5:8004/test-400kb.bin cdg
+http://192.168.0.5:8003/test-400kb.bin bic
+http://192.168.0.5:8002/test-400kb.bin bbr
+http://192.168.0.5:8001/test-400kb.bin cubic
+http://192.168.0.5:8000/test-400kb.bin reno
