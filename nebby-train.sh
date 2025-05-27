@@ -1,8 +1,8 @@
 #!/bin/bash
 # nebby-train.sh - Complete script for training the Nebby classifier
-# Prerequisites: Docker containers with different CCAs must be running (from host-network-cca-servers.sh)
+# Modified to capture 10 traces per CCA
 
-echo "======= NEBBY TRAINING SCRIPT ======="
+echo "======= NEBBY TRAINING SCRIPT (10 TRACES PER CCA) ======="
 echo "Starting training process for Nebby CCA classifier"
 
 # Create necessary directories
@@ -10,6 +10,9 @@ mkdir -p measurements
 mkdir -p candidates-measurements
 mkdir -p logs/results
 mkdir -p logs/plots
+
+# Number of traces to collect per CCA
+NUM_TRACES=20
 
 # Function to check and optionally change host CCA
 check_host_cca() {
@@ -36,7 +39,7 @@ check_host_cca() {
 # Check for containers
 CONTAINERS=$(sudo docker ps --format '{{.Names}}' | grep "^nebby-")
 if [ -z "$CONTAINERS" ]; then
-    echo "Error: No nebby CCA containers found. Please run host-network-cca-servers.sh first."
+    echo "Error: No nebby CCA containers found. Please run local_sv/setup_cca.sh first."
     exit 1
 fi
 
@@ -49,8 +52,8 @@ progress() {
 echo "Host system CCA configuration:"
 check_host_cca
 
-# Step 1: Collect BiF Traces
-# progress "1" "Collecting BiF Traces"
+# Step 1: Collect BiF Traces (10 per CCA)
+# progress "1" "Collecting BiF Traces (${NUM_TRACES} per CCA)"
 
 # # Get list of CCA names and URLs
 # declare -a CCA_NAMES=()
@@ -65,46 +68,52 @@ check_host_cca
 #     echo "Found server: $CCA on port $PORT"
 # done
 
-# # Create a configuration file for wget
-# CONFIG_FILE="nebby-training-urls.txt"
-# > $CONFIG_FILE
-
-# for i in "${!CCA_NAMES[@]}"; do
-#     echo "${CCA_URLS[$i]} ${CCA_NAMES[$i]}" >> $CONFIG_FILE
-#     echo "Added ${CCA_NAMES[$i]} to training set"
-# done
-
-# # Function to run tests for a CCA (ensuring no sudo for mm commands)
+# # Function to run tests for a CCA with multiple traces
 # run_cca_test() {
 #     local cca_name="$1"
 #     local url="$2"
 #     local delay_suffix="$3"
 #     local delay_ms="$4"
+#     local trace_num="$5"
     
-#     echo "Collecting BiF traces for $cca_name$delay_suffix using $url"
+#     echo "Collecting BiF trace ${trace_num}/${NUM_TRACES} for $cca_name$delay_suffix using $url"
     
 #     # Optional: Change host CCA to match the one being tested
 #     # Uncomment if you want to align host CCA with container CCA
 #     check_host_cca "$cca_name"
     
-#     # Use Nebby's run_test.sh script (this should handle mm commands without sudo)
+#     # Create unique filename for this trace
+#     local trace_id="${cca_name}${delay_suffix}-v${trace_num}"
+    
+#     # Use Nebby's run_test.sh script
 #     cd scripts
-#     ./run_test.sh "$cca_name$delay_suffix" 5 $delay_ms 200 2 "$url"
+#     ./run_test.sh "$trace_id" 5 $delay_ms 200 2 "$url"
 #     cd ..
     
-#     echo "✅ Collected traces for $cca_name$delay_suffix"
+#     echo "✅ Collected trace ${trace_num} for $cca_name$delay_suffix"
 # }
 
-# # Collect traces using wget for all CCAs
+# # Collect multiple traces for each CCA
 # for i in "${!CCA_NAMES[@]}"; do
 #     CCA="${CCA_NAMES[$i]}"
 #     URL="${CCA_URLS[$i]}"
     
-#     # Standard collection (50ms delay)
-#     run_cca_test "$CCA" "$URL" "" 50
+#     echo ""
+#     echo "🔄 Collecting traces for $CCA..."
     
-#     # Additional collection with different delay profile (100ms) as mentioned in the paper
-#     run_cca_test "$CCA" "$URL" "-100ms" 100
+#     # Collect NUM_TRACES for standard delay profile (50ms)
+#     for trace_num in $(seq 1 $NUM_TRACES); do
+#         run_cca_test "$CCA" "$URL" "" 50 "$trace_num"
+#         sleep 2  # Brief pause between measurements
+#     done
+    
+#     # Collect NUM_TRACES for higher delay profile (100ms)
+#     for trace_num in $(seq 1 $NUM_TRACES); do
+#         run_cca_test "$CCA" "$URL" "-100ms" 100 "$trace_num"
+#         sleep 2  # Brief pause between measurements
+#     done
+    
+#     echo "✅ Completed all ${NUM_TRACES} traces for $CCA (both delay profiles)"
 # done
 
 # Store original host CCA to restore later if needed
@@ -113,24 +122,34 @@ ORIGINAL_CCA=$(sysctl net.ipv4.tcp_congestion_control | cut -d= -f2 | tr -d ' ')
 # Step 2: Processing BiF Traces
 progress "2" "Processing BiF Traces"
 cd analysis
-python3 run-lakshay.py -b "${CCA_NAMES[@]}" "${CCA_NAMES[@]/%/-100ms}"
+
+# Build list of all trace files for processing
+ALL_TRACES=()
+for cca in "${CCA_NAMES[@]}"; do
+    for trace_num in $(seq 1 $NUM_TRACES); do
+        ALL_TRACES+=("${cca}-v${trace_num}")
+        ALL_TRACES+=("${cca}-100ms-v${trace_num}")
+    done
+done
+
+python3 run-lakshay.py -b "${ALL_TRACES[@]}"
 cd ..
 
 # Step 3: Feature extraction
 progress "3" "Extracting Features from Traces"
 cd analysis
-python3 run-lakshay.py -f "${CCA_NAMES[@]}" "${CCA_NAMES[@]/%/-100ms}"
+python3 run-lakshay.py -f "${ALL_TRACES[@]}"
 cd ..
 
 # Step 4: Polynomial fit
 progress "4" "Fitting Polynomials to Features"
 cd analysis
-python3 run-lakshay.py -c "${CCA_NAMES[@]}" "${CCA_NAMES[@]/%/-100ms}"
+python3 run-lakshay.py -c "${ALL_TRACES[@]}"
 cd ..
 
 # Step 5: Final training step
 progress "5" "Training Classification Model"
-MODEL_FILE="nebby_model_$(date +%Y%m%d_%H%M%S).pkl"
+MODEL_FILE="nebby_model_$(date +%Y%m%d_%H%M%S)_${NUM_TRACES}traces.pkl"
 cd analysis
 python3 run-lakshay.py -t "../$MODEL_FILE" "../measurements/"
 cd ..
@@ -153,6 +172,8 @@ echo "Model saved to: $MODEL_FILE"
 echo ""
 echo "Training Summary:"
 echo "- CCAs trained: ${CCA_NAMES[*]}"
+echo "- Traces per CCA: $NUM_TRACES per delay profile"
+echo "- Total traces: $((${#CCA_NAMES[@]} * NUM_TRACES * 2))"
 echo "- Delay profiles: 50ms, 100ms"
 echo "- Host CCA: $(sysctl net.ipv4.tcp_congestion_control | cut -d= -f2 | tr -d ' ')"
 echo ""
@@ -161,10 +182,3 @@ echo "cd analysis"
 echo "python3 run-lakshay.py -a \"../$MODEL_FILE\" <target_directory>"
 echo ""
 echo "🚀 You can now use Nebby to identify CCAs on the Internet!"
-
-# Additional notes for testing new CCAs
-echo ""
-echo "📝 Notes for testing new CCAs:"
-echo "- Remember to change host CCA using: sudo sysctl net.ipv4.tcp_congestion_control=<cca_name>"
-echo "- Do NOT run mm commands with sudo"
-echo "- Ensure the run_test.sh script handles mm commands with appropriate user permissions"

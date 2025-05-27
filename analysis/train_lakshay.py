@@ -145,6 +145,25 @@ def getGaussianParams(vals):
     return cc_gaussian_params
 
 def train(var, present_files, ss=225):
+    """
+    Modified training function to handle multiple traces per CCA
+    """
+    # Filter files to get all traces for each CCA
+    cca_file_groups = {}
+    for cca in var:
+        cca_file_groups[cca] = []
+        for file in present_files:
+            # Handle both old format (cca-params) and new format (cca-v1-params)
+            if file.startswith(cca + "-v") or file.startswith(cca + "-100ms-v"):
+                cca_file_groups[cca].append(file)
+            elif file.startswith(cca + "-") and "-v" not in file:
+                # Legacy single-trace format
+                cca_file_groups[cca].append(file)
+    
+    print(f"Training data distribution:")
+    for cca, files in cca_file_groups.items():
+        print(f"  {cca}: {len(files)} traces")
+    
     cc_coeff = getCCcoeff(var, present_files, ss=ss, ft_thresh=1)
     vals, new_vals = getCoeff(cc_coeff)
     cc_gaussian_params = getGaussianParams(vals)
